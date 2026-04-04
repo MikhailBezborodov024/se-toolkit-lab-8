@@ -20,27 +20,25 @@ WORKDIR /app
 # Copy workspace root pyproject.toml and uv.lock for dependency resolution
 COPY --from=workspace pyproject.toml uv.lock /app/
 
-# Copy mcp-lms for workspace dependency resolution
+# Copy mcp-lms for workspace dependency resolution (needed for uv sync)
 COPY --from=mcp mcp-lms /app/mcp/mcp-lms
+
+# Copy nanobot-websocket-channel for workspace dependency resolution
+COPY --from=webchat . /app/nanobot-websocket-channel
 
 # Copy nanobot project files
 COPY pyproject.toml /app/nanobot/pyproject.toml
 
-# Sync dependencies for nanobot package (without mcp-lms which is mounted as volume)
+# Sync dependencies for nanobot package
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-install-workspace --package nanobot
 
 # Copy the rest of nanobot source
 COPY . /app/nanobot
 
-# Install mcp-lms from mounted context
-RUN --mount=type=cache,target=/root/.cache/uv \
-    pip install --no-deps /app/mcp/mcp-lms
-
 # Sync again to install the nanobot package itself
-# Note: mcp-lms and other workspace packages are mounted as volumes at runtime
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-install-workspace --package nanobot
+    uv sync --frozen --package nanobot
 
 # ---
 # Stage 2: use a final image without uv

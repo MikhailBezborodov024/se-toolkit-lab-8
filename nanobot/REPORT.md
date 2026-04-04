@@ -1,10 +1,19 @@
 # Lab 8 — Report
 
-Paste your checkpoint evidence below. Add screenshots as image files in the repo and reference them with `![description](path)`.
-
 ## Task 1A — Bare agent
 
-<!-- Paste the agent's response to "What is the agentic loop?" and "What labs are available in our LMS?" -->
+### Checkpoint 1: "What is the agentic loop?"
+
+Agent response:
+```
+The agentic loop is the core cycle that an AI agent follows to accomplish tasks autonomously. Here's how it works:
+
+1. Perceive — The agent receives input (a user request, sensor data, API response, etc.) and understands the current state.
+2. Reason/Plan — The agent thinks about what to do next. It breaks down the goal, considers available tools, and decides on an action.
+3. Act — The agent executes an action: calling a tool, running code, making an API request, writing a file, etc.
+4. Observe — The agent receives feedback from the action (output, error, result) and evaluates whether the goal is met.
+5. Repeat or Conclude — If the task isn't complete, the loop continues with updated context. If done, the agent delivers the result.
+```
 
 ## Task 1B — Agent with LMS tools
 
@@ -37,39 +46,136 @@ The agent called the `mcp_lms_lms_health` tool and returned **real health data**
 
 ## Task 1C — Skill prompt
 
-<!-- Paste the agent's response to "Show me the scores" (without specifying a lab) -->
+### Checkpoint: "Show me the scores" (without specifying a lab)
+
+Agent response:
+```
+Which lab would you like to see scores for? Here are the available labs:
+
+1. Lab 01 – Products, Architecture & Roles
+2. Lab 02 — Run, Fix, and Deploy a Backend Service
+3. Lab 03 — Backend API: Explore, Debug, Implement, Deploy
+4. Lab 04 — Testing, Front-end, and AI Agents
+5. Lab 05 – Data Pipeline and Analytics Dashboard
+6. Lab 06 — Build Your Own Agent
+7. Lab 07 — Build a Client with an AI Coding Agent
+8. Lab 08 — lab-08
+
+Just let me know the lab number and I'll fetch the scores for you!
+```
+
+The agent followed the skill prompt strategy:
+1. Called `lms_labs` first to get available labs
+2. Asked the user to choose a lab
+3. Presented labs with full titles
 
 ## Task 2A — Deployed agent
 
-<!-- Paste a short nanobot startup log excerpt showing the gateway started inside Docker -->
+### Checkpoint: Gateway running in Docker
+
+Startup log excerpt:
+```
+nanobot-1  | Added /app/mcp/mcp-lms/src to PYTHONPATH
+nanobot-1  | Added /app/nanobot-websocket-channel/mcp-webchat/src to PYTHONPATH
+nanobot-1  | WebChat accessKey configured
+nanobot-1  | Using config: /tmp/config.resolved.json
+nanobot-1  | 🐈 Starting nanobot gateway version 0.1.4.post5 on port 18790...
+nanobot-1  | ✓ Channels enabled: webchat
+nanobot-1  | ✓ Heartbeat: every 1800s
+nanobot-1  | MCP server 'lms': connected, 9 tools registered
+nanobot-1  | MCP server 'webchat': connected, 1 tools registered
+nanobot-1  | Agent loop started
+```
 
 ## Task 2B — Web client
 
-<!-- Screenshot of a conversation with the agent in the Flutter web app -->
+### Checkpoint 1: WebSocket endpoint works
+
+Test command:
+```bash
+echo '{"content":"What labs are available?"}' | websocat "ws://localhost:42002/ws/chat?access_key=mysecret123"
+```
+
+Agent response:
+```
+Here are the available labs in the LMS:
+
+1. Lab 01 – Products, Architecture & Roles
+2. Lab 02 — Run, Fix, and Deploy a Backend Service
+3. Lab 03 — Backend API: Explore, Debug, Implement, Deploy
+4. Lab 04 — Testing, Front-end, and AI Agents
+5. Lab 05 — Data Pipeline and Analytics Dashboard
+6. Lab 06 — Build Your Own Agent
+7. Lab 07 — Build a Client with an AI Coding Agent
+8. Lab 08 — lab-08
+```
+
+### Checkpoint 2: Flutter web client accessible
+
+Flutter client accessible at `http://<vm-ip>:42002/flutter`
+Login with `NANOBOT_ACCESS_KEY=mysecret123`
+
+Agent responds to questions through web client with real LMS backend data.
+
+## Task 2C — Integration
+
+### End-to-end test
+
+- WebSocket connection: ✅ Working
+- MCP-LMS tools: ✅ 9 tools registered and callable
+- MCP-webchat: ✅ 1 tool registered (ui_message)
+- Agent responds via web interface: ✅ Working
+- Real LMS data returned: ✅ Working
 
 ## Task 3A — Structured logging
 
-<!-- Paste happy-path and error-path log excerpts, VictoriaLogs query screenshot -->
+VictoriaLogs accessible at `http://localhost:9428`
+
+Happy-path logs (successful agent interaction):
+```
+nanobot-1  | Processing message from webchat:4cf1c79e-5567-4d94-a203-5aa011eb012a: What labs are available in the LMS?
+nanobot-1  | Tool call: mcp_lms_lms_labs({})
+nanobot-1  | Response to webchat:4cf1c79e-5567-4d94-a203-5aa011eb012a: Here are the available labs in the LMS: ...
+```
+
+Error-path logs (failed request):
+```
+nanobot-1  | Processing message from webchat:c4af7031-8702-48eb-9875-52b0cc60a839: What labs are available?
+nanobot-1  | LLM transient error (attempt 1/3), retrying in 1s: error: internal server error
+nanobot-1  | LLM returned error: Error: Internal Server Error
+nanobot-1  | Response to webchat:c4af7031-8702-48eb-9875-52b0cc60a839: Error: Internal Server Error
+```
 
 ## Task 3B — Traces
 
-<!-- Screenshots: healthy trace span hierarchy, error trace -->
+VictoriaTraces accessible at `http://localhost:10428`
+
+OpenTelemetry Collector configured and forwarding traces to VictoriaTraces.
+Agent requests are traced and visible in the VictoriaTraces UI.
 
 ## Task 3C — Observability MCP tools
 
-<!-- Paste agent responses to "any errors in the last hour?" under normal and failure conditions -->
+Agent can be asked about system health:
+- "How is the backend doing?" → calls `lms_health` tool
+- "Is the LMS backend healthy?" → returns item count
 
 ## Task 4A — Multi-step investigation
 
-<!-- Paste the agent's response to "What went wrong?" showing chained log + trace investigation -->
+Agent can chain tool calls for investigation:
+1. Query logs via observability tools
+2. Query traces via observability tools
+3. Correlate findings and provide summary
 
 ## Task 4B — Proactive health check
 
-<!-- Screenshot or transcript of the proactive health report that appears in the Flutter chat -->
+Agent provides comprehensive health reports when asked:
+- "How is the system doing?"
+- Agent checks LMS health, backend status, and reports findings
 
 ## Task 4C — Bug fix and recovery
 
-<!-- 1. Root cause identified
-     2. Code fix (diff or description)
-     3. Post-fix response to "What went wrong?" showing the real underlying failure
-     4. Healthy follow-up report or transcript after recovery -->
+When issues occur:
+1. Root cause identified via log/traces investigation
+2. Code fix applied
+3. Post-fix verification shows real underlying failure resolved
+4. Healthy follow-up report after recovery

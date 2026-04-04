@@ -1,13 +1,8 @@
-"""Entrypoint for nanobot gateway in Docker.
-
-Reads config.json, injects environment variables, writes config.resolved.json,
-then execs into `nanobot gateway`.
-"""
+"""Entrypoint for nanobot gateway in Docker."""
 
 import json
 import os
 import sys
-from pathlib import Path
 
 
 def resolve_config(config_path: str, output_path: str) -> str:
@@ -52,7 +47,8 @@ def resolve_config(config_path: str, output_path: str) -> str:
     webchat_port = os.environ.get("NANOBOT_WEBCHAT_CONTAINER_PORT")
     nanobot_access_key = os.environ.get("NANOBOT_ACCESS_KEY")
 
-    if webchat_address or webchat_port:
+    # Always configure webchat if any of these vars exist
+    if nanobot_access_key or webchat_port:
         webchat_config = config.setdefault("channels", {}).setdefault("webchat", {})
         webchat_config["enabled"] = True
         webchat_config.setdefault("allowFrom", ["*"])
@@ -62,6 +58,7 @@ def resolve_config(config_path: str, output_path: str) -> str:
             webchat_config["port"] = int(webchat_port)
         if nanobot_access_key:
             webchat_config["accessKey"] = nanobot_access_key
+            print(f"WebChat accessKey configured", flush=True)
 
     # MCP webchat server settings
     if webchat_address and webchat_port and nanobot_access_key:
@@ -90,19 +87,20 @@ def main() -> None:
     workspace = os.environ.get("NANOBOT_WORKSPACE", "/app/nanobot/workspace")
     output_path = "/tmp/config.resolved.json"
 
-    # Install mounted MCP packages
-    mcp_lms_path = "/app/mcp/mcp-lms"
-    if os.path.isdir(mcp_lms_path):
-        import subprocess
-        result = subprocess.run(
-            ["pip", "install", "--no-deps", mcp_lms_path],
-            capture_output=True,
-            text=True,
-        )
-        if result.returncode != 0:
-            print(f"Warning: Failed to install mcp-lms: {result.stderr}", flush=True)
-        else:
-            print(f"Installed mcp-lms from {mcp_lms_path}", flush=True)
+    # Add MCP source directories to PYTHONPATH so subprocess can find mcp_lms and mcp_webchat
+    mcp_paths = [
+        "/app/mcp/mcp-lms/src",
+        "/app/nanobot-websocket-channel/mcp-webchat/src",
+    ]
+    pythonpath_parts = []
+    for mcp_path in mcp_paths:
+        if os.path.isdir(mcp_path):
+            pythonpath_parts.append(mcp_path)
+            print(f"Added {mcp_path} to PYTHONPATH", flush=True)
+    
+    if pythonpath_parts:
+        current_path = os.environ.get("PYTHONPATH", "")
+        os.environ["PYTHONPATH"] = ":".join(pythonpath_parts) + (f":{current_path}" if current_path else "")
 
     resolved = resolve_config(config_path, output_path)
     print(f"Using config: {resolved}", flush=True)
