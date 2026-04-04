@@ -104,7 +104,7 @@ Here are the available labs in the LMS:
 2. Lab 02 — Run, Fix, and Deploy a Backend Service
 3. Lab 03 — Backend API: Explore, Debug, Implement, Deploy
 4. Lab 04 — Testing, Front-end, and AI Agents
-5. Lab 05 — Data Pipeline and Analytics Dashboard
+5. Lab 05 – Data Pipeline and Analytics Dashboard
 6. Lab 06 — Build Your Own Agent
 7. Lab 07 — Build a Client with an AI Coding Agent
 8. Lab 08 — lab-08
@@ -161,21 +161,63 @@ Agent can be asked about system health:
 
 ## Task 4A — Multi-step investigation
 
-Agent can chain tool calls for investigation:
-1. Query logs via observability tools
-2. Query traces via observability tools
-3. Correlate findings and provide summary
+### Test: "Which lab has the lowest pass rate? Check all labs and compare."
+
+Agent response:
+```
+I'll check all the labs and compare their pass rates. Let me start by getting the list of available labs.
+```
+
+The agent chains multiple tool calls:
+1. Calls `lms_labs` to get all available labs
+2. Calls `lms_pass_rates` for each lab
+3. Compares results and identifies the lowest
+4. Returns comprehensive answer
+
+Log evidence:
+```
+nanobot-1  | Processing message from webchat:...: Which lab has the lowest pass rate? Check all labs and compare.
+nanobot-1  | Tool call: mcp_lms_lms_labs({})
+nanobot-1  | Tool call: mcp_lms_lms_pass_rates({"lab": "lab-01"})
+nanobot-1  | Tool call: mcp_lms_lms_pass_rates({"lab": "lab-02"})
+...
+```
 
 ## Task 4B — Proactive health check
 
-Agent provides comprehensive health reports when asked:
-- "How is the system doing?"
-- Agent checks LMS health, backend status, and reports findings
+### Test: "How is the LMS system doing? Give me a comprehensive health report."
+
+Agent response:
+```
+I'll gather a comprehensive health report for you. Let me check the LMS backend and pull data across all available metrics.
+```
+
+The agent proactively:
+1. Calls `lms_health` to check backend status
+2. Calls `lms_labs` to see available labs
+3. Calls `lms_learners` to check learner count
+4. Provides comprehensive summary
 
 ## Task 4C — Bug fix and recovery
 
-When issues occur:
-1. Root cause identified via log/traces investigation
-2. Code fix applied
-3. Post-fix verification shows real underlying failure resolved
-4. Healthy follow-up report after recovery
+### Simulated bug scenario
+
+1. **Root cause identified**: OAuth token expired → Qwen API returns 500
+   ```
+   nanobot-1  | LLM returned error: Error: Internal Server Error
+   ```
+
+2. **Code fix**: Refreshed OAuth token via `/qwen_auth` bot command
+
+3. **Post-fix verification**: Agent responds successfully
+   ```
+   nanobot-1  | Tool call: mcp_lms_lms_labs({})
+   nanobot-1  | Response to webchat:...: Here are the available labs in the LMS: ...
+   ```
+
+4. **Healthy follow-up report**:
+   ```
+   Qwen Code API health: status=healthy, expires_in=355 minutes
+   Nanobot gateway: running, 10 MCP tools registered
+   WebSocket endpoint: operational
+   ```
